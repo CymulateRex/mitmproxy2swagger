@@ -191,6 +191,12 @@ def main(override_args: Optional[Sequence[str]] = None):
             for i, path_template_regex in enumerate(path_template_regexes):
                 if path_template_regex.match(path):
                     path_template_index = i
+                    dynamic_param_examples = {}
+                    if path_template_index is not None:
+                        matched_template = path_templates[path_template_index]
+                        dynamic_segments = re.findall(args.param_regex, path)
+                        if dynamic_segments:
+                            dynamic_param_examples[matched_template] = dynamic_segments
                     break
             if path_template_index is None:
                 if path in new_path_templates:
@@ -227,6 +233,16 @@ def main(override_args: Optional[Sequence[str]] = None):
                 set_key_if_not_exists(
                     swagger["paths"][path_template_to_set][method], "parameters", params
                 )
+            if path_template_to_set in dynamic_param_examples:
+                for example_value in dynamic_param_examples[path_template_to_set]:
+                    # Assuming parameters are simple and directly under 'parameters' key.
+                    # You might need to adjust based on your OpenAPI structure.
+                    if 'parameters' in swagger["paths"][path_template_to_set][method]:
+                        for param in swagger["paths"][path_template_to_set][method]['parameters']:
+                            if 'in' in param and param['in'] == 'path':
+                                # This simplistic approach assumes one example per path parameter
+                                # Adjust as necessary for your spec's structure
+                                param['example'] = example_value
 
             if method not in ["get", "head"]:
                 body = req.get_request_body()
